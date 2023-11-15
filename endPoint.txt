@@ -1,0 +1,9 @@
+
+    API ENDPOINTS :
+    -------------
+
+    '/'  - Welcome message for the root path
+    '/bookRoom'  - for booking a bookRoom
+    '/listRooms'  - List all Rooms with Booked Data
+    '/listCustomers'  -  List all customers with booked Data
+    '/customerBookingHistory/:customerName'  - List how many times a customer has booked the room

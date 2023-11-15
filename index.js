@@ -41,6 +41,11 @@ const bookings = [
   { id: 14, customerName: 'Ava Hall', date: '2023-11-28', startTime: '12:00 PM', endTime: '02:00 PM', roomId: 14 },
 ];
 
+// Welcome message for the root path
+app.get('/', (req, res) => {
+  res.send('Welcome to the room booking system!');
+});
+
 // Create a Room
 app.post('/createRoom', (req, res) => {
   const { seats, amenities, pricePerHour } = req.body;
@@ -105,11 +110,6 @@ app.get('/customerBookingHistory/:customerName', (req, res) => {
   const { customerName } = req.params;
   const customerHistory = bookings.filter((booking) => booking.customerName === customerName);
   res.json(customerHistory);
-});
-
-// Welcome message for the root path
-app.get('/', (req, res) => {
-  res.send('Welcome to the room booking system!');
 });
 
 app.listen(port, () => {
