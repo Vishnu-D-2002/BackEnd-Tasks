@@ -1,42 +1,36 @@
-// Import required modules
 const express = require('express');
 const fs = require('fs');
-
-// Create an Express application
+const {MongoDB_URI,PORT} = require('./utils/config');
+const cors = require('cors');
 const app = express();
-
-// Generate a timestamp to be used in the filename
-const currentTime = new Date().toISOString().replace(/:/g, '_');
-
-// Specify the port on which the server will listen
-const PORT = 3001;
-
-// Configure Express to parse incoming JSON data
+app.use(cors());
 app.use(express.json());
 
-// Define a route to handle GET requests to the root endpoint ('/')
-app.get('/', (req, res) => {
-  // Read the content of a file with the generated filename
-  fs.readFile(`./${currentTime}.txt`, 'utf-8', (err, data) => {
-    if (err) {
-      throw err;
-    } else {
-      console.log('All files are read successfully');
-      res.send(data);
-    }
+const mongoose = require('mongoose');
+
+mongoose.connect(MongoDB_URI)
+  .then(() => {
+    console.log('connected to MongoDB...');
+  })
+  .catch((err) => {
+    console.error(err);
   });
+
+const noteSchema = new mongoose.Schema({
+  id: Number,
+  content: String,
+  important: Boolean
 });
 
-// Write the current timestamp into a new file
-fs.writeFile(`./${currentTime}.txt`, currentTime, { flag: 'w+' }, (err) => {
-  if (err) {
-    console.log(err);
-  } else {
-    console.log('File added successfully');
-  }
+const Note = mongoose.model("Note", noteSchema, "notes");
+
+app.get('/', (req, res) => {
+  Note.find({}, {})
+    .then(notes => {
+      res.status(200).json(notes);
+    })
 });
 
-// Start the Express server, listening on the specified port
 app.listen(PORT, () => {
   console.log(`Server is running at http://localhost:${PORT}`);
 });
