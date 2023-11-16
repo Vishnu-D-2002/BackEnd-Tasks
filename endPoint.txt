@@ -3,6 +3,7 @@
     -------------
 
     '/'  - Welcome message for the root path
+    '/createRoom'  - To Create a Room
     '/bookRoom'  - for booking a bookRoom
     '/listRooms'  - List all Rooms with Booked Data
     '/listCustomers'  -  List all customers with booked Data
