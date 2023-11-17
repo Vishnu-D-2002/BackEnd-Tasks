@@ -1,10 +1,12 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
 const { MongoDB_URI, PORT } = require('./utils/config');
 const cors = require('cors');
+const bodyParser = require('body-parser');
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
 
 // Connect to MongoDB (make sure MongoDB is running)
 mongoose.connect(MongoDB_URI)
