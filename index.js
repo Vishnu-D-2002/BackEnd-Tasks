@@ -1,42 +1,40 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const { MongoDB_URI, PORT } = require('./utils/config');
 const cors = require('cors');
-const bodyParser = require('body-parser');
+const { MONGODB_URI, PORT } = require('./utils/config');
 const app = express();
+
+app.use(express.json());
+
 app.use(cors());
-app.use(bodyParser.json());
 
-// Connect to MongoDB (make sure MongoDB is running)
-mongoose.connect(MongoDB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => {
-      console.log('Connected to MongoDB...');
-      app.listen(PORT, () => {
-      console.log(`Server is running on port http://localhost:${PORT}`);
-    });
-    })
-    .catch((err) => {
-        console.log('Error connecting to MongoDB:', err);
-    });
+mongoose.connect(MONGODB_URI)
+  .then(() => {
+    console.log('Connecting to MongoDB');
+    app.listen(PORT, () => {
+    console.log(`Server is running on port http://localhost:${PORT}`);
+});
+  })
+  .catch((err) => {
+    console.error('Error connecting to MongoDB:', err);
+  });
 
-// Define Mentor and Student models
 const mentorSchema = new mongoose.Schema({
-    mentor_id: Number,
-    name: String,
-    course: String,
-    mentor_name :String,
-    mentees: [{ student_id: Number}],
+  mentor_id: Number,
+  mentor_name: String,
+  course: String,
+  mentees: Array
 }, { versionKey: false });
 
 const studentSchema = new mongoose.Schema({
-    student_id: Number,
-    student_name: String,
-    mentor_id: Number,
-    course: String,
-}, { versionKey: false });
+  student_id: Number,
+  student_name: String,
+  mentor_id: Number,
+  course: String,
+}, { versionKey: false }); 
 
+const Student = mongoose.model('Student', studentSchema,); 
 const Mentor = mongoose.model('Mentor', mentorSchema);
-const Student = mongoose.model('Student', studentSchema);
 
 app.get('/', (req, res) => {
   res.send(`<h1 style="color: #333; text-align: center;">API END POINTS FOR Assign-Mentor</h1>
