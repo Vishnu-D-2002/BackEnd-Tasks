@@ -1,6 +1,5 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
 const { MongoDB_URI, PORT } = require('./utils/config');
 const cors = require('cors');
 const bodyParser = require('body-parser');
