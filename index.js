@@ -214,7 +214,7 @@ app.put('/assignMentor/:studentId/:mentorId', async (req, res) => {
 
     newMentor.mentees.push({ student_id: studentId });
     await newMentor.save();
-    
+
     res.status(200).json({ message: 'Mentor assigned or changed successfully' });
   } catch (error) {
     console.error('Error assigning or changing mentor:', error);
