@@ -1,22 +1,22 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
 const { MongoDB_URI, PORT } = require('./utils/config');
 const cors = require('cors');
 const app = express();
-
-app.use(bodyParser.json());
+app.use(cors());
+app.use(express.json());
 
 // Connect to MongoDB (make sure MongoDB is running)
 mongoose.connect(MongoDB_URI)
     .then(() => {
-        console.log('Connected to MongoDB...');
+      console.log('Connected to MongoDB...');
+      app.listen(PORT, () => {
+      console.log(`Server is running on port http://localhost:${PORT}`);
+    });
     })
     .catch((err) => {
         console.log('Error connecting to MongoDB:', err);
     });
-
-app.use(cors());
 
 // Define Mentor and Student models
 const mentorSchema = new mongoose.Schema({
@@ -24,7 +24,7 @@ const mentorSchema = new mongoose.Schema({
     name: String,
     course: String,
     mentor_name :String,
-    mentees: [{ student_id: Number, student_name: String }],
+    mentees: [{ student_id: Number}],
 }, { versionKey: false });
 
 const studentSchema = new mongoose.Schema({
@@ -68,12 +68,17 @@ app.get('/', (req, res) => {
             <td style="border: 1px solid #ddd; padding: 8px;">API to create a Student</td>
         </tr>
         <tr>
-            <td style="border: 1px solid #ddd; padding: 8px;">/assignStudentToMentor/:mentorName</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">/assignmentor/:mentorId/:studentId</td>
             <td style="border: 1px solid #ddd; padding: 8px;">POST</td>
             <td style="border: 1px solid #ddd; padding: 8px;">API to assign a Student to a Mentor</td>
         </tr>
         <tr>
-            <td style="border: 1px solid #ddd; padding: 8px;">/assignMentor/:studentName</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">/studentsWithoutMentor</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">GET</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">API to get students without a mentor</td>
+        </tr>
+        <tr>
+            <td style="border: 1px solid #ddd; padding: 8px;">/assignMentor/:studentId/:mentorId</td>
             <td style="border: 1px solid #ddd; padding: 8px;">PUT</td>
             <td style="border: 1px solid #ddd; padding: 8px;">API to assign or change Mentor for a particular Student</td>
         </tr>
@@ -139,104 +144,125 @@ app.post('/createStudent', async (req, res) => {
 });
 
 // API to assign a Student to a Mentor
-app.post('/assignStudentToMentor/:mentorName', async (req, res) => {
-  const mentorName = req.params.mentorName;
-  const studentName = req.body.studentName;
-
+app.post('/assignmentor/:mentorId/:studentId', async (req, res) => {
   try {
-    // Check if the student already has a mentor
-    const existingStudent = await Student.findOne({ student_name: studentName });
-    if (existingStudent && existingStudent.mentor_name !== undefined && existingStudent.mentor_name !== null) {
-      return res.status(400).send('Student already has a mentor');
+    const mentorId = req.params.mentorId;
+    const studentId = req.params.studentId;
+
+    // Check if the mentor and student exist
+    const mentor = await Mentor.findOne({ mentor_id: mentorId });
+    const student = await Student.findOne({ student_id: studentId });
+
+    if (!mentor || !student) {
+      return res.status(404).json({ error: 'Mentor or student not found' });
     }
 
-    // Assign the student to the mentor
-    await Student.updateOne({ student_name: studentName }, { mentor_name: mentorName });
+    // Check if the student already has a mentor
+    if (student.mentor_id) {
+      return res.status(400).json({ error: 'Student already has a mentor' });
+    }
 
-    // Update the mentor's mentees array
-    const mentor = await Mentor.findOne({ mentor_name: mentorName });
-    mentor.mentees.push({ student_id: existingStudent.student_id, student_name: studentName });
+    // Assign the mentor to the student
+    student.mentor_id = mentorId;
+    await student.save();
+
+    // Add the student to the mentor's mentees list
+    mentor.mentees.push({ student_id: studentId });
     await mentor.save();
 
-    // Update the student's mentor_id in the /students field
-    await Student.updateOne({ student_name: studentName }, { mentor_id: mentor.mentor_id });
-
-    res.send(`Student ${studentName} assigned to Mentor ${mentorName}`);
+    res.status(200).json({ message: 'Student assigned to mentor successfully' });
   } catch (error) {
-    console.log(error);
-    res.status(500).send('Error assigning Student to Mentor');
+    console.error('Error assigning mentor to student:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// API to get students without a mentor
+app.get('/studentsWithoutMentor', async (req, res) => {
+  try {
+    const studentsWithoutMentor = await Student.find({ mentor_id: null });
+    res.json(studentsWithoutMentor);
+  } catch (error) {
+    console.error('Error fetching students without mentor:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
 // API to assign or change Mentor for a particular Student
-app.put('/assignMentor/:studentName', async (req, res) => {
-  const studentName = req.params.studentName;
-  const newMentorName = req.body.newMentorName;
-
+app.put('/assignMentor/:studentId/:mentorId', async (req, res) => {
   try {
-    // Find the current mentor of the student
-    const student = await Student.findOne({ student_name: studentName });
-    const currentMentorName = student.mentor_name;
+    const studentId = req.params.studentId;
+    const newMentorId = req.params.mentorId;
 
-    // Update the mentor's mentees array to remove the student
-    if (currentMentorName) {
-      const currentMentor = await Mentor.findOne({ mentor_name: currentMentorName });
+    // Check if the student exists
+    const student = await Student.findOne({ student_id: studentId });
 
-      // Check if the mentor exists before attempting to access its properties
-      if (currentMentor && currentMentor.mentees) {
-        currentMentor.mentees = currentMentor.mentees.filter((mentee) => mentee.student_name !== studentName);
-        await currentMentor.save();
-      }
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
     }
 
-    // Assign or change the mentor for the student
-    await Student.updateOne({ student_name: studentName }, { mentor_name: newMentorName });
+    // Check if the new mentor exists
+    const newMentor = await Mentor.findOne({ mentor_id: newMentorId });
 
-    // Update the new mentor's mentees array
-    const newMentor = await Mentor.findOne({ mentor_name: newMentorName });
-    if (newMentor) {
-      newMentor.mentees.push({ student_id: student.student_id, student_name: studentName });
-      await newMentor.save();
+    if (!newMentor) {
+      return res.status(404).json({ error: 'Mentor not found' });
     }
 
-    // Update the student's mentor_id in the /students field
-    await Student.updateOne({ student_name: studentName }, { mentor_id: newMentor ? newMentor.mentor_id : null });
+    // Change the mentor for the student
+    student.mentor_id = newMentorId;
+    await student.save();
 
-    res.send(`Mentor assigned to Student ${studentName}`);
+    newMentor.mentees.push({ student_id: studentId });
+    await newMentor.save();
+    
+    res.status(200).json({ message: 'Mentor assigned or changed successfully' });
   } catch (error) {
-    console.error(error);
-    res.status(500).send(`Error assigning Mentor to Student: ${error.message}`);
+    console.error('Error assigning or changing mentor:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
+// API to show all students for a particular mentor
 app.get('/studentsForMentor/:mentorId', async (req, res) => {
-  const mentorId = req.params.mentorId;
-
   try {
-    console.log(`Fetching students for Mentor ID: ${mentorId}`);
-    const students = await Student.find({ mentor_id: mentorId }).lean();
-    console.log('Students:', students);
-    res.json(students);
+    const mentorId = req.params.mentorId;
+
+    // Check if the mentor exists
+    const mentor = await Mentor.findOne({ mentor_id: mentorId });
+
+    if (!mentor) {
+      return res.status(404).json({ error: 'Mentor not found' });
+    }
+
+    // Get all students for the mentor
+    const studentsForMentor = await Student.find({ mentor_id: mentorId });
+    res.json(studentsForMentor);
   } catch (error) {
-    console.log(error);
-    res.status(500).send('Error fetching students for Mentor');
+    console.error('Error fetching students for mentor:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
 // API to show the previously assigned mentor for a particular student
 app.get('/previousMentor/:studentId', async (req, res) => {
-  const studentId = req.params.studentId;
-
   try {
+    const studentId = req.params.studentId;
+
+    // Check if the student exists
     const student = await Student.findOne({ student_id: studentId });
-    const previousMentor = student.mentor_id || 'No previous mentor assigned';
-    res.send(`Previous Mentor for Student ID ${studentId}: ${previousMentor}`);
+
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    // Get the previously assigned mentor
+    const previousMentorId = student.mentor_id;
+    const previousMentor = await Mentor.findOne({ mentor_id: previousMentorId });
+
+    res.json(previousMentor);
   } catch (error) {
-    console.log(error);
-    res.status(500).send('Error fetching previous Mentor for Student');
+    console.error('Error fetching previous mentor:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port http://localhost:${PORT}`);
-});
