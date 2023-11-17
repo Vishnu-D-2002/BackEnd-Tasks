@@ -8,7 +8,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Connect to MongoDB (make sure MongoDB is running)
-mongoose.connect(MongoDB_URI)
+mongoose.connect(MongoDB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => {
       console.log('Connected to MongoDB...');
       app.listen(PORT, () => {
