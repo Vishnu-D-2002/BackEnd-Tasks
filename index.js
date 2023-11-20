@@ -27,7 +27,7 @@ const noteSchema = new mongoose.Schema({
 const Note = mongoose.model("Note", noteSchema, "notes");
 
 app.get('/', (req, res) => {
-  Note.find({}, {})
+  Note.find({}, {}).sort({id:1})
     .then(notes => {
       res.status(200).json(notes);
     })
