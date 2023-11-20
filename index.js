@@ -1,5 +1,4 @@
 const express = require('express');
-const fs = require('fs');
 const {MONGODB_URI,PORT} = require('./utils/config');
 const cors = require('cors');
 const app = express();
