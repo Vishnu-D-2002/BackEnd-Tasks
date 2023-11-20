@@ -48,7 +48,7 @@ app.post('/', (req, res) => {
   const note = new Note(req.body);
   note.save()
     .then(note => {
-      res.status(201).json("Note created successfully",note);
+      res.status(201).json({message:"Note created successfully",note});
     })
     .catch(err => {
       res.status(404).json({ message: "Error in finding id" })
